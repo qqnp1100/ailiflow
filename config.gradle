@@ -1,0 +1,15 @@
+ext {
+    android = [
+            online: "online"
+    ]
+}
+
+initFlowConfig()
+
+void initFlowConfig() {
+    println("-------------initFlowConfig-------------")
+    if (System.properties == null || System.properties.isEmpty()) {
+        println("initFlowConfig is null or empty");
+        return
+    }
+}

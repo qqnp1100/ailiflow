@@ -53,3 +53,5 @@ build/
 .idea/libraries
 captures/
 /sdk-xfplay
+
+outputs/

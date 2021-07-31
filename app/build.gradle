@@ -1,22 +1,42 @@
+import java.nio.file.Paths
+apply from: "flow.gradle"
+
 apply plugin: 'com.android.application'
+apply from: 'tinker-support.gradle'
+
+def online = rootProject.ext.android.online
+
+def time = buildTime("MM-dd-HH-mm")
 
 android {
     compileSdkVersion 28
     buildToolsVersion "28.0.3"
-
+    signingConfigs {
+        config {
+            storeFile file('./test.jks')
+            keyAlias 'testtest'
+            keyPassword 'testtest'
+            storePassword 'testtest'
+        }
+    }
     defaultConfig {
         applicationId "com.example.ailiflow"
         minSdkVersion 16
-        targetSdkVersion 29
+        targetSdkVersion 28
         versionCode 1
-        versionName "1.0"
-
+        versionName "1.1"
+        flavorDimensions "versionName"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+
+        }
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources false
+            signingConfig signingConfigs.config
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -24,14 +44,102 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    productFlavors {
+        xiaoai {
+            //manifestPlaceholders = [UMENG_CHANNEL_VALUE: "wandoujia"]
+        }
+        tuhao {
+            //manifestPlaceholders=[UMENG_CHANNEL_VALUE: "xiaomi"]
+        }
+    }
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            tasks.all {
+                if (variant.buildType.name == "release") {
+                    def outputFile = output.outputFile
+                    def taskName = variant.name
+                    if ("assemble${taskName.capitalize()}".equalsIgnoreCase(it.name)) {
+                        it.doLast {
+                            File backUpDir = new File(Paths.get(project.rootDir.absolutePath, OUTPUTS_PATH, BACKUP_PATH, variant.productFlavors.get(0).name).toString())
+                            if (backUpDir.exists()) {
+                                backUpDir.deleteDir()
+                            }
+                            backUpDir.mkdir()
+                            String backUpApkName = "${variant.productFlavors.get(0).name}-release-${time}-${online}.apk"
+                            String mappingPath = Paths.get(buildDir.path, "outputs", "mapping", variant.dirName, "mapping.txt")
+                            String rPath = Paths.get(buildDir.path, "intermediates", "symbols", variant.dirName, "R.txt")
+                            File mf = new File(mappingPath)
+                            println("${mappingPath} : ${mf.exists()}")
+                            copy {
+                                from outputFile
+                                into backUpDir.path
+                                rename { String fileName ->
+                                    fileName = backUpApkName
+                                }
+                            }
+                            copy {
+                                println("copy ${mappingPath}")
+                                from mappingPath
+                                into backUpDir.path
+                            }
+                            copy {
+                                println("copy ${rPath}")
+                                from rPath
+                                into backUpDir.path
+                            }
+                            packFilePathList.add(Paths.get(backUpDir.path, backUpApkName).toString())
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
+this.afterEvaluate {
+    Project project ->
+        println("-------------flowPack start-------------")
+        def appFlavor = System.properties.getProperty("APP_FLAVOR", "all")
+        def taskName = ""
+        if (appFlavor == "all") {
+            //如果是打包所有包
+            taskName = ":app:assembleRelease"
+        } else {
+            //如果是特定的马甲  如 :loveshow:assemble + "App_main" + "Release"
+            taskName = ":app:assemble" + appFlavor.capitalize() + "Release"
+        }
+        File jiaGudir = new File(project.rootDir.absolutePath, OUTPUTS_PATH)
+        if (jiaGudir.exists()) {
+//            jiaGudir.deleteDir()
+        }
+        //获取build task 任务
+        Task buildTask = getBuildTask(project, taskName)
+        Task executeJenkinsCommandTask = getBuildTask(project, ":app:flowPack")
+        executeJenkinsCommandTask.dependsOn(buildTask)
+}
+def buildTime(String time) {
+    def date = new Date()
+    def formattedDate = date.format(time)
+    return formattedDate
+}
+Task getBuildTask(org.gradle.api.Project project, String taskPath) {
+
+    //获取该project管理task的容器
+    TaskContainer taskContainer = project.getTasks()
+    //拿到build的Task对象
+    Task buildTask = taskContainer.getByPath(taskPath)
+
+    return buildTask
+}
 dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'com.google.android.material:material:1.2.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
-    testImplementation 'junit:junit:4.+'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+
+    implementation 'com.tencent.bugly:crashreport_upgrade:1.5.23'
+    implementation 'com.tencent.tinker:tinker-android-lib:1.9.14.17'
+    implementation 'com.tencent.bugly:nativecrashreport:3.9.0'
+    implementation "com.android.support:multidex:1.0.3"
 }

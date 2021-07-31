@@ -1,0 +1,81 @@
+import java.nio.file.Paths
+
+project.ext.OUTPUTS_PATH = "outputs"
+project.ext.BACKUP_PATH = "基准包"
+project.ext.JIAGU_PATH = "渠道包"
+project.ext.CHANNEL_NAME = "渠道列表.text"
+project.ext.packFilePathList = []
+
+
+task flowPack {
+    doLast {
+        println("-------------flowPack end-------------")
+        for (fp in packFilePathList) {
+            println("jiagu apk path:$fp")
+        }
+
+        String jiaguAccount = "572979214@qq.com"
+        String jiaguPassword = "biezz@2018"
+
+        String jiaguPath = System.properties.getProperty("JIAGU_PATH", "")
+        if (!jiaguPath?.trim()) {
+            println("error:加固jar路径为空")
+            return
+        }
+        println("-------------开始加固-------------")
+        String channel = System.properties.getProperty("CHANNEL", "")
+        if (!channel?.trim()) {
+            println("error:渠道为空")
+            return
+        }
+        String[] channelArray = channel.split("\\|")
+        String channelText = ""
+        for (int i; i < channelArray.size(); i++) {
+            if (!channelArray[i]?.trim()) {
+                break
+            }
+            String[] channelNames = channelArray[i].split("-")
+            if (channelNames.size() != 2) {
+                break
+            }
+            channelText += "UMENG_CHANNEL " + channelNames[0] + " " + channelNames[1] + (i == channelArray.size() - 1 ? "" : "\n")
+        }
+        println(channelText)
+        File jiaGudir = new File(project.rootDir.absolutePath, OUTPUTS_PATH)
+        if (!jiaGudir.exists()) {
+            jiaGudir.mkdir()
+        }
+        File channelFile = new File(jiaGudir.path, CHANNEL_NAME)
+        channelFile.write(channelText)
+
+        String jiaguJarPath = Paths.get(jiaguPath, "jiagu.jar")
+        String keyPath = Paths.get(project.rootDir.path, "app", "test.jks")
+
+        executeCmd("java -jar ${jiaguJarPath} –login $jiaguAccount $jiaguPassword")
+        executeCmd("java -jar ${jiaguJarPath} -importsign ${keyPath} testtest testtest testtest")
+        executeCmd("java -jar ${jiaguJarPath} -deletemulpkg")
+        executeCmd("java -jar ${jiaguJarPath} -importmulpkg ${channelFile}")
+        executeCmd("java -jar ${jiaguJarPath} -showmulpkg")
+        executeCmd("java -jar ${jiaguJarPath} -showsign")
+        def outFile = new File(jiaGudir.path, JIAGU_PATH)
+        if (!outFile.exists()) {
+            outFile.mkdir()
+        }
+        for (fp in packFilePathList) {
+            println("jiagu apk path:$fp")
+            File f = new File(fp)
+            if (f.exists()) {
+                executeCmd("java -jar ${jiaguJarPath} -jiagu ${fp} ${outFile} -autosign -automulpkg")
+            }
+        }
+    }
+}
+
+def executeCmd(cmd) {
+    println "executeCmd: ${cmd}"
+    def p = cmd.execute(null, new File(project.rootDir.absolutePath))
+    println p.text
+    p.waitFor()  // 用以等待外部进程调用结束
+    println p.exitValue()
+}
+
