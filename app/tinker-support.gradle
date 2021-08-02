@@ -22,7 +22,7 @@ def detailedBuildTime() {
 }
 
 def tinkerEnable() {
-    return true
+    return rootProject.ext.android.tinkerEnable
 }
 
 /**

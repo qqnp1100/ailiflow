@@ -1,4 +1,5 @@
 import java.nio.file.Paths
+
 apply from: "flow.gradle"
 
 apply plugin: 'com.android.application'
@@ -7,6 +8,8 @@ apply from: 'tinker-support.gradle'
 def online = rootProject.ext.android.online
 
 def time = buildTime("MM-dd-HH-mm")
+def tinkerEnable = rootProject.ext.android.tinkerEnable
+def jiaguEnable = rootProject.ext.android.jiaguEnable
 
 android {
     compileSdkVersion 28
@@ -66,29 +69,51 @@ android {
                                 backUpDir.deleteDir()
                             }
                             backUpDir.mkdir()
-                            String backUpApkName = "${variant.productFlavors.get(0).name}-release-${time}-${online}.apk"
+                            String backUpApkName = "${variant.productFlavors.get(0).name}-${time}-${online}-${getGitVersion()}.apk"
                             String mappingPath = Paths.get(buildDir.path, "outputs", "mapping", variant.dirName, "mapping.txt")
                             String rPath = Paths.get(buildDir.path, "intermediates", "symbols", variant.dirName, "R.txt")
-                            File mf = new File(mappingPath)
-                            println("${mappingPath} : ${mf.exists()}")
-                            copy {
-                                from outputFile
-                                into backUpDir.path
-                                rename { String fileName ->
-                                    fileName = backUpApkName
+                            if (tinkerEnable) {
+                                copy {
+                                    from outputFile
+                                    into backUpDir.path
+                                    rename { String fileName ->
+                                        fileName = backUpApkName
+                                    }
+                                }
+                                copy {
+                                    println("copy ${mappingPath}")
+                                    from mappingPath
+                                    into backUpDir.path
+                                }
+                                copy {
+                                    println("copy ${rPath}")
+                                    from rPath
+                                    into backUpDir.path
+                                }
+                                packFilePathList.add(Paths.get(backUpDir.path, backUpApkName).toString())
+                            } else if (jiaguEnable) {
+                                copy {
+                                    println("copy ${rPath}")
+                                    from outputFile
+                                    into outputFile.parent
+                                    rename { String fileName ->
+                                        fileName = backUpApkName
+                                    }
+                                }
+                                packFilePathList.add(Paths.get(outputFile.parent, backUpApkName).toString())
+                            } else {
+                                File normalDir = new File(Paths.get(project.rootDir.absolutePath, OUTPUTS_PATH, variant.productFlavors.get(0).name).toString())
+                                if (!normalDir.exists()) {
+                                    normalDir.mkdirs()
+                                }
+                                copy {
+                                    from outputFile
+                                    into normalDir.path
+                                    rename { String fileName ->
+                                        fileName = backUpApkName
+                                    }
                                 }
                             }
-                            copy {
-                                println("copy ${mappingPath}")
-                                from mappingPath
-                                into backUpDir.path
-                            }
-                            copy {
-                                println("copy ${rPath}")
-                                from rPath
-                                into backUpDir.path
-                            }
-                            packFilePathList.add(Paths.get(backUpDir.path, backUpApkName).toString())
                         }
                     }
                 }
@@ -118,11 +143,13 @@ this.afterEvaluate {
         Task executeJenkinsCommandTask = getBuildTask(project, ":app:flowPack")
         executeJenkinsCommandTask.dependsOn(buildTask)
 }
+
 def buildTime(String time) {
     def date = new Date()
     def formattedDate = date.format(time)
     return formattedDate
 }
+
 Task getBuildTask(org.gradle.api.Project project, String taskPath) {
 
     //获取该project管理task的容器
@@ -132,6 +159,34 @@ Task getBuildTask(org.gradle.api.Project project, String taskPath) {
 
     return buildTask
 }
+
+/**
+ * 读取Git日志
+ * 保存起来,方便以后维护查看
+ * @return
+ */
+String getGitVersion() {
+    return 'git rev-parse --short HEAD'.execute().text.trim()
+}
+
+/**
+ * 读取Git分支
+ * @return
+ */
+
+String getGitBranch() {
+    final String resultStr = 'git branch -a'.execute().text.trim();
+    if (resultStr != null && resultStr != "") {
+        List<String> branchs = resultStr.readLines();
+        for (String str : branchs) {
+            if (str.contains("* ")) {
+                return str.substring(2)
+            }
+        }
+    }
+    return "********"
+}
+
 dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.2.0'

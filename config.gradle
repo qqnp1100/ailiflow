@@ -1,6 +1,8 @@
 ext {
     android = [
-            online: "online"
+            online      : "online",
+            tinkerEnable: false,
+            jiaguEnable: false
     ]
 }
 
@@ -12,4 +14,6 @@ void initFlowConfig() {
         println("initFlowConfig is null or empty");
         return
     }
+    rootProject.ext.android.tinkerEnable = System.properties.getProperty("TINKER", "false").equals("true")
+    rootProject.ext.android.jiaguEnable = System.properties.getProperty("JIAGU_ENABLE", "false").equals("true")
 }

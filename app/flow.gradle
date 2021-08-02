@@ -1,21 +1,23 @@
 import java.nio.file.Paths
 
 project.ext.OUTPUTS_PATH = "outputs"
-project.ext.BACKUP_PATH = "基准包"
-project.ext.JIAGU_PATH = "渠道包"
-project.ext.CHANNEL_NAME = "渠道列表.text"
+project.ext.BACKUP_PATH = "BackUp"
+project.ext.JIAGU_PATH = "Market"
+project.ext.CHANNEL_NAME = "Channels.text"
 project.ext.packFilePathList = []
 
 
 task flowPack {
     doLast {
         println("-------------flowPack end-------------")
-        for (fp in packFilePathList) {
-            println("jiagu apk path:$fp")
-        }
-
         String jiaguAccount = "572979214@qq.com"
         String jiaguPassword = "biezz@2018"
+        String keyPath = Paths.get(project.rootDir.path, "app", "test.jks")
+
+        if (!rootProject.ext.android.jiaguEnable) {
+            println("无加固")
+            return
+        }
 
         String jiaguPath = System.properties.getProperty("JIAGU_PATH", "")
         if (!jiaguPath?.trim()) {
@@ -49,7 +51,6 @@ task flowPack {
         channelFile.write(channelText)
 
         String jiaguJarPath = Paths.get(jiaguPath, "jiagu.jar")
-        String keyPath = Paths.get(project.rootDir.path, "app", "test.jks")
 
         executeCmd("java -jar ${jiaguJarPath} –login $jiaguAccount $jiaguPassword")
         executeCmd("java -jar ${jiaguJarPath} -importsign ${keyPath} testtest testtest testtest")
