@@ -52,7 +52,7 @@ task flowPack {
 
         String jiaguJarPath = Paths.get(jiaguPath, "jiagu.jar")
 
-        executeCmd("java -jar ${jiaguJarPath} –login $jiaguAccount $jiaguPassword")
+        executeCmd("java -jar ${jiaguJarPath} -login $jiaguAccount $jiaguPassword")
         executeCmd("java -jar ${jiaguJarPath} -importsign ${keyPath} testtest testtest testtest")
         executeCmd("java -jar ${jiaguJarPath} -deletemulpkg")
         executeCmd("java -jar ${jiaguJarPath} -importmulpkg ${channelFile}")
@@ -71,7 +71,6 @@ task flowPack {
         }
     }
 }
-
 def executeCmd(cmd) {
     println "executeCmd: ${cmd}"
     def p = cmd.execute(null, new File(project.rootDir.absolutePath))
