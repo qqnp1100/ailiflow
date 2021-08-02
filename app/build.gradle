@@ -65,6 +65,7 @@ android {
                 if (variant.buildType.name == "release") {
                     def outputFile = output.outputFile
                     def taskName = variant.name
+                    println("xxx:taskName=${it.name},${tinkerEnable},${jiaguEnable}")
                     if ("assemble${taskName.capitalize()}".equalsIgnoreCase(it.name)) {
                         it.doLast {
                             File backUpDir = new File(Paths.get(project.rootDir.absolutePath, OUTPUTS_PATH, BACKUP_PATH, variant.productFlavors.get(0).name).toString())
