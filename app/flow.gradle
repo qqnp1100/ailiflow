@@ -48,7 +48,7 @@ task flowPack {
             jiaGudir.mkdir()
         }
         File channelFile = new File(jiaGudir.path, CHANNEL_NAME)
-        channelFile.write(channelText)
+        channelFile.write(channelText,"UTF-8")
 
         String jiaguJarPath = Paths.get(jiaguPath, "jiagu.jar")
 
